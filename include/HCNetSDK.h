@@ -13217,7 +13217,7 @@ typedef struct
 }NET_DVR_CLIENTINFO, *LPNET_DVR_CLIENTINFO;
 
 //SDK状态信息(9000新增)
-typedef struct 
+typedef struct NET_DVR_SDKSTATE
 {
     DWORD dwTotalLoginNum;        //当前login用户数
     DWORD dwTotalRealPlayNum;    //当前realplay路数
@@ -13235,10 +13235,10 @@ typedef struct
     DWORD dwBackupNum;          // 当前文件备份路数
     DWORD dwTotalInquestUploadNum; //当前审讯上传路数
     DWORD dwRes[6];
-}NET_DVR_SDKSTATE, *LPNET_DVR_SDKSTATE;
+} *LPNET_DVR_SDKSTATE;
 
 //SDK功能支持信息(9000新增)
-typedef struct 
+typedef struct NET_DVR_SDKABL
 {
     DWORD dwMaxLoginNum;        //最大login用户数 MAX_LOGIN_USERS
     DWORD dwMaxRealPlayNum;        //最大realplay路数 WATCH_NUM
@@ -13252,7 +13252,7 @@ typedef struct
     DWORD dwMaxVoiceComNum;        //最大语音转发路数 SERVER_NUM
     DWORD dwMaxBroadCastNum;    //最大语音广播路数 MAX_CASTNUM
     DWORD dwRes[10];
-}NET_DVR_SDKABL, *LPNET_DVR_SDKABL;
+} *LPNET_DVR_SDKABL;
 
 //报警设备信息
 typedef struct
