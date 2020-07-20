@@ -13028,7 +13028,7 @@ typedef struct
 }NET_DVR_DEVICEINFO, *LPNET_DVR_DEVICEINFO;
 
 //NET_DVR_Login_V30()参数结构
-typedef struct
+typedef struct NET_DVR_DEVICEINFO_V30
 {
     BYTE sSerialNumber[SERIALNO_LEN];  //序列号
     BYTE byAlarmInPortNum;                //报警输入个数
@@ -13115,9 +13115,9 @@ typedef struct
     // bySupport7 & 0x40  表示设备是否支持 主从跟踪（从摄像机）
     // bySupport7 & 0x80  表示设备是否支持 报文加密
     BYTE  byRes2;        //保留
-}NET_DVR_DEVICEINFO_V30, *LPNET_DVR_DEVICEINFO_V30;
+} NET_DVR_DEVICEINFO_V30, *LPNET_DVR_DEVICEINFO_V30;
 
-typedef struct tagNET_DVR_DEVICEINFO_V40
+typedef struct NET_DVR_DEVICEINFO_V40
 {
     NET_DVR_DEVICEINFO_V30 struDeviceV30;
     BYTE  bySupportLock;        //设备支持锁定功能，该字段由SDK根据设备返回值来赋值的。bySupportLock为1时，dwSurplusLockTime和byRetryLoginTime有效
@@ -13140,7 +13140,7 @@ typedef struct tagNET_DVR_DEVICEINFO_V40
     BYTE  bySupportStreamEncrypt;  //能力集扩展，位与结果：0- 不支持，1- 支持 bySupportStreamEncrypt & 0x1:表示是否支持RTP/TLS取流 bySupportStreamEncrypt & 0x2:  表示是否支持SRTP/UDP取流 bySupportStreamEncrypt & 0x4:  表示是否支持SRTP/MULTICAST取流
     BYTE byMarketType;//0-无效（未知类型）,1-经销型，2-行业型
     BYTE  byRes2[238];
-}NET_DVR_DEVICEINFO_V40, *LPNET_DVR_DEVICEINFO_V40;
+} *LPNET_DVR_DEVICEINFO_V40;
 
 typedef void (CALLBACK *fLoginResultCallBack) (LONG lUserID, DWORD dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo , void* pUser);
 
@@ -13148,7 +13148,7 @@ typedef void (CALLBACK *fLoginResultCallBack) (LONG lUserID, DWORD dwResult, LPN
 #define NET_DVR_LOGIN_USERNAME_MAX_LEN 64
 #define NET_DVR_LOGIN_PASSWD_MAX_LEN 64
 
-typedef struct  
+typedef struct NET_DVR_USER_LOGIN_INFO
 {
     char sDeviceAddress[NET_DVR_DEV_ADDRESS_MAX_LEN];
     BYTE byUseTransport;    //是否启用能力集透传，0--不启用透传，默认，1--启用透传
@@ -13165,7 +13165,7 @@ typedef struct
     LONG iProxyID;    //代理服务器序号，添加代理服务器信息时，相对应的服务器数组下表值
     BYTE byVerifyMode;  //认证方式，0-不认证，1-双向认证，2-单向认证；认证仅在使用TLS的时候生效;
     BYTE byRes3[119];
-}NET_DVR_USER_LOGIN_INFO,*LPNET_DVR_USER_LOGIN_INFO;
+} *LPNET_DVR_USER_LOGIN_INFO;
 
 //sdk网络环境枚举变量，用于远程升级
 typedef enum _SDK_NET_ENV
@@ -43683,12 +43683,13 @@ typedef struct tagNET_DVR_GB28181_SERVICE_CFG
     BYTE   byAuthPasswdEx[MAX_PASSWD_LEN_EX];   //密码扩展为64位，设置时，byAuthPasswdEx为非空，此参数有效，byAuthPasswd无效，获取时，byAuthPasswdEx和byAuthPasswd都返回
     BYTE   byRes[190];                //保留
 }NET_DVR_GB28181_SERVICE_CFG,*LPNET_DVR_GB28181_SERVICE_CFG;
-typedef    struct    tagNET_DVR_ACTIVATECFG
+
+typedef struct NET_DVR_ACTIVATECFG
 {
     DWORD   dwSize;    //结构体大小
     BYTE    sPassword[PASSWD_LEN];    //初始密码
     BYTE    byRes[108];
-}NET_DVR_ACTIVATECFG,*LPNET_DVR_ACTIVATECFG;
+} *LPNET_DVR_ACTIVATECFG;
 
 typedef struct tagNET_DVR_IPDEVICE_ACTIVATE_CFG
 {

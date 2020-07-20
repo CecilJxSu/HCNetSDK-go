@@ -256,6 +256,61 @@ func NET_DVR_GetErrorMsg(pErrorNo int) string {
 	))
 }
 
+/************************* 用户注册 *************************/
+
+// 通过解析服务器，获取设备的动态IP地址和端口号
+// example:
+//    sGetIP := [16]byte{}
+//    var dwPort uint32
+//    result := hik.NET_DVR_GetDVRIPByResolveSvr_EX(<your ipserver>, 7071, <device name>, <device serialNumber>, &sGetIP[0], &dwPort)
+func NET_DVR_GetDVRIPByResolveSvr_EX(
+	sServerIP string, wServerPort uint16, sDVRName string,
+	sDVRSerialNumber string, sGetIP *byte, dwPort *uint32,
+) bool {
+	_sDVRName := []byte(sDVRName)
+	_sDVRSerialNumber := []byte(sDVRSerialNumber)
+
+	return goBOOL(C.NET_DVR_GetDVRIPByResolveSvr_EX(
+		(*C.char)(unsafe.Pointer(&[]byte(sServerIP)[0])),
+		C.WORD(wServerPort),
+		(*C.BYTE)(unsafe.Pointer(&_sDVRName[0])),
+		C.WORD(len(_sDVRName)),
+		(*C.BYTE)(unsafe.Pointer(&_sDVRSerialNumber[0])),
+		C.WORD(len(_sDVRSerialNumber)),
+		(*C.char)(unsafe.Pointer(sGetIP)),
+		(*C.DWORD)(unsafe.Pointer(dwPort)),
+	))
+}
+
+// 激活设备
+// example:
+//    config := hik.NET_DVR_ACTIVATECFG{}
+//    copy(config.SPassword[:], <initial password>)
+//    config.DwSize = uint32(unsafe.Sizeof(config))
+//    result := hik.NET_DVR_ActivateDevice("192.168.8.110", 8000, &config)
+func NET_DVR_ActivateDevice(sDVRIP string, wDVRPort uint16, lpActivateCfg LPNET_DVR_ACTIVATECFG) bool {
+	return goBOOL(C.NET_DVR_ActivateDevice(
+		(*C.char)(unsafe.Pointer(&[]byte(sDVRIP)[0])),
+		C.WORD(wDVRPort),
+		C.LPNET_DVR_ACTIVATECFG(unsafe.Pointer(lpActivateCfg)),
+	))
+}
+
+// 用户注册设备（支持异步登录）
+func NET_DVR_Login_V40(pLoginInfo LPNET_DVR_USER_LOGIN_INFO, lpDeviceInfo LPNET_DVR_DEVICEINFO_V40) int {
+	var _pLoginInfo C.LPNET_DVR_USER_LOGIN_INFO = C.LPNET_DVR_USER_LOGIN_INFO(unsafe.Pointer(pLoginInfo))
+	result := int(C.NET_DVR_Login_V40(
+		_pLoginInfo,
+		C.LPNET_DVR_DEVICEINFO_V40(unsafe.Pointer(lpDeviceInfo)),
+	))
+	return result
+}
+
+// 用户注销
+func NET_DVR_Logout(lUserID int) bool {
+	return goBOOL(C.NET_DVR_Logout(C.LONG(lUserID)))
+}
+
 // TODO: split to another source file, but missing C.BOOL when build.
 /******************* golang and cgo type convert each other *******************/
 // C.BOOL --> go bool
