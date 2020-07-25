@@ -21,6 +21,10 @@ package hikvision
 #else
     #error("Unknow OS")
 #endif
+
+//----------------- See `cfuns.go` file -----------------
+
+void fLoginResultCallBack_cgo (int lUserID, unsigned int dwResult, void* lpDeviceInfo, void* pUser);
 */
 import "C"
 import (
@@ -297,13 +301,46 @@ func NET_DVR_ActivateDevice(sDVRIP string, wDVRPort uint16, lpActivateCfg LPNET_
 }
 
 // 用户注册设备（支持异步登录）
+// example:
+//    loginInfo := hik.NET_DVR_USER_LOGIN_INFO{}
+//	  deviceInfo := hik.NET_DVR_DEVICEINFO_V40{}
+//
+//    copy(loginInfo.SDeviceAddress[:], "192.168.8.110")
+//    loginInfo.WPort = 8000
+//    loginInfo.ByUseTransport = 0
+//    loginInfo.BUseAsynLogin = 0
+//    copy(loginInfo.SUserName[:], <your username>)
+//    copy(loginInfo.SPassword[:], <your password>)
+//    loginInfo.CbLoginResult = func(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVICEINFO_V30, pUser unsafe.Pointer) {
+//        if 1 == dwResult {
+//            fmt.Println("异步登陆成功，userId: ", strconv.Itoa(lUserID))
+//            fmt.Println("设备序列号: ", string(lpDeviceInfo.SSerialNumber[:]))
+//        } else {
+//            fmt.Println("异步登陆失败")
+//        }
+//    }
+//    result := hik.NET_DVR_Login_V40(&loginInfo, &deviceInfo)
 func NET_DVR_Login_V40(pLoginInfo LPNET_DVR_USER_LOGIN_INFO, lpDeviceInfo LPNET_DVR_DEVICEINFO_V40) int {
+	// 缓存回调函数
+	loginChan <- pLoginInfo.CbLoginResult
+	// 使用 C 的回调函数，此函数会调用 golang 的函数
 	var _pLoginInfo C.LPNET_DVR_USER_LOGIN_INFO = C.LPNET_DVR_USER_LOGIN_INFO(unsafe.Pointer(pLoginInfo))
+	(*_pLoginInfo).cbLoginResult = (C.fLoginResultCallBack)(C.fLoginResultCallBack_cgo)
 	result := int(C.NET_DVR_Login_V40(
 		_pLoginInfo,
 		C.LPNET_DVR_DEVICEINFO_V40(unsafe.Pointer(lpDeviceInfo)),
 	))
 	return result
+}
+
+// 登陆回调函数的缓存通道
+var loginChan = make(chan FLoginResultCallBack, 1)
+
+//export fLoginResultCallBackGo
+func fLoginResultCallBackGo(lUserID int, dwResult uint, lpDeviceInfo C.LPNET_DVR_DEVICEINFO_V30, pUser unsafe.Pointer) {
+	deviceInfo := convert_NET_DVR_DEVICEINFO_V30(*lpDeviceInfo)
+	// 从通道中获取回调函数
+	(<-loginChan)(lUserID, uint32(dwResult), &deviceInfo, pUser)
 }
 
 // 用户注销
