@@ -4,12 +4,18 @@ package hikvision
 // 头文件
 #cgo CFLAGS: -I../include
 #include "HCNetSDK.h"
+#include <stdio.h>
 
 // See https://github.com/golang/go/wiki/cgo#function-pointer-callbacks
 
 void fLoginResultCallBack_cgo (int lUserID, unsigned int dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void* pUser) {
     void fLoginResultCallBackGo(int, unsigned int, void*, void*);
     fLoginResultCallBackGo(lUserID, dwResult, lpDeviceInfo, pUser);
+}
+
+void fRemoteConfigCallback_cgo (DWORD dwType, void* lpBuffer, DWORD dwBufLen, void* pUserData) {
+    void fRemoteConfigCallbackGo(DWORD, void*, DWORD, void*);
+    fRemoteConfigCallbackGo(dwType, lpBuffer, dwBufLen, pUserData);
 }
 */
 import "C"

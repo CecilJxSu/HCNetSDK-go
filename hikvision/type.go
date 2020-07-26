@@ -405,3 +405,136 @@ type NET_DVR_DEVICEINFO_V40 struct {
 	ByRes2                 [238]byte
 }
 type LPNET_DVR_DEVICEINFO_V40 *NET_DVR_DEVICEINFO_V40
+
+/************************* 网络参数配置 *************************/
+
+// 网络配置回调函数
+type FRemoteConfigCallback func(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint32, pUserData unsafe.Pointer)
+
+type NET_DVR_CARD_CFG_COND struct {
+	DwSize             uint32
+	DwCardNum          uint32 //设置或获取卡数量，获取时置为0xffffffff表示获取所有卡信息
+	ByCheckCardNo      byte   //设备是否进行卡号校验，0-不校验，1-校验
+	ByRes1             [3]byte
+	WLocalControllerID uint16 //就地控制器序号，表示往就地控制器下发离线卡参数，0代表是门禁主机
+	ByRes2             [2]byte
+	DwLockID           uint32 //锁ID
+	ByRes3             [20]byte
+}
+
+type LPNET_DVR_CARD_CFG_COND *NET_DVR_CARD_CFG_COND
+
+// enum NET_SDK_CALLBACK_TYPE
+type NET_SDK_CALLBACK_TYPE int32
+
+const (
+	NET_SDK_CALLBACK_TYPE_STATUS   NET_SDK_CALLBACK_TYPE = 0 // 回调状态值
+	NET_SDK_CALLBACK_TYPE_PROGRESS NET_SDK_CALLBACK_TYPE = 1 // 回调进度值
+	NET_SDK_CALLBACK_TYPE_DATA     NET_SDK_CALLBACK_TYPE = 2 // 回调数据内容
+)
+
+// enum NET_SDK_CALLBACK_STATUS_NORMAL
+type NET_SDK_CALLBACK_STATUS_NORMAL int32
+
+const (
+	NET_SDK_CALLBACK_STATUS_SUCCESS           NET_SDK_CALLBACK_STATUS_NORMAL = 1000 // 成功
+	NET_SDK_CALLBACK_STATUS_PROCESSING        NET_SDK_CALLBACK_STATUS_NORMAL = 1001 // 处理中
+	NET_SDK_CALLBACK_STATUS_FAILED            NET_SDK_CALLBACK_STATUS_NORMAL = 1002 // 失败
+	NET_SDK_CALLBACK_STATUS_EXCEPTION         NET_SDK_CALLBACK_STATUS_NORMAL = 1003 // 异常
+	NET_SDK_CALLBACK_STATUS_LANGUAGE_MISMATCH NET_SDK_CALLBACK_STATUS_NORMAL = 1004 //（IPC配置文件导入）语言不匹配
+	NET_SDK_CALLBACK_STATUS_DEV_TYPE_MISMATCH NET_SDK_CALLBACK_STATUS_NORMAL = 1005 //（IPC配置文件导入）设备类型不匹配
+	NET_DVR_CALLBACK_STATUS_SEND_WAIT         NET_SDK_CALLBACK_STATUS_NORMAL = 1006 // 发送等待
+)
+
+type NET_DVR_CARD_CFG struct {
+	DwSize            uint32
+	DwModifyParamType uint32
+	// 需要修改的卡参数，设置卡参数时有效，按位表示，每位代表一种参数，1为需要修改，0为不修改
+	ByCardNo        [ACS_CARD_NO_LEN]byte //卡号
+	ByCardValid     byte                  //卡是否有效，0-无效，1-有效（用于删除卡，设置时置为0进行删除，获取时此字段始终为1）
+	ByCardType      byte                  //卡类型，1-普通卡，2-残疾人卡，3-黑名单卡，4-巡更卡，5-胁迫卡，6-超级卡，7-来宾卡，8-解除卡，默认普通卡
+	ByLeaderCard    byte                  //是否为首卡，1-是，0-否
+	ByRes1          byte
+	DwDoorRight     uint32                                      //门权限，按位表示，1为有权限，0为无权限，从低位到高位表示对门1-N是否有权限
+	StruValid       NET_DVR_VALID_PERIOD_CFG                    //有效期参数
+	DwBelongGroup   uint32                                      //所属群组，按位表示，1-属于，0-不属于，从低位到高位表示是否从属群组1-N
+	ByCardPassword  [CARD_PASSWORD_LEN]byte                     //卡密码
+	ByCardRightPlan [MAX_DOOR_NUM][MAX_CARD_RIGHT_PLAN_NUM]byte //卡权限计划，取值为计划模板编号，同个门不同计划模板采用权限或的方式处理
+	DwMaxSwipeTime  uint32                                      //最大刷卡次数，0为无次数限制
+	DwSwipeTime     uint32                                      //已刷卡次数
+	WRoomNumber     uint16                                      //房间号
+	WFloorNumber    int16                                       //层号
+	ByRes2          [20]byte
+}
+
+type LPNET_DVR_CARD_CFG *NET_DVR_CARD_CFG
+
+type NET_DVR_VALID_PERIOD_CFG struct {
+	ByEnable         byte            //使能有效期，0-不使能，1使能
+	ByBeginTimeFlag  byte            //是否限制起始时间的标志，0-不限制，1-限制
+	ByEnableTimeFlag byte            //是否限制终止时间的标志，0-不限制，1-限制
+	ByTimeDurationNo byte            //有效期索引,从0开始（时间段通过SDK设置给锁，后续在制卡时，只需要传递有效期索引即可，以减少数据量）
+	StruBeginTime    NET_DVR_TIME_EX //有效期起始时间
+	StruEndTime      NET_DVR_TIME_EX //有效期结束时间
+	ByTimeType       byte            //时间类型：0-设备本地时间（默认），1-UTC时间（对于struBeginTime，struEndTime字段有效）
+	ByRes2           [31]byte
+}
+
+type LPNET_DVR_VALID_PERIOD_CFG *NET_DVR_VALID_PERIOD_CFG
+
+type NET_DVR_TIME_EX struct {
+	WYear    uint16
+	ByMonth  byte
+	ByDay    byte
+	ByHour   byte
+	ByMinute byte
+	BySecond byte
+	ByRes    byte
+}
+
+type LPNET_DVR_TIME_EX *NET_DVR_TIME_EX
+
+type NET_DVR_CARD_CFG_V50 struct {
+	DwSize            uint32
+	DwModifyParamType uint32
+	// 需要修改的卡参数，设置卡参数时有效，按位表示，每位代表一种参数，1为需要修改，0为不修改
+	ByCardNo           [ACS_CARD_NO_LEN]byte                             //卡号
+	ByCardValid        byte                                              //卡是否有效，0-无效，1-有效（用于删除卡，设置时置为0进行删除，获取时此字段始终为1）
+	ByCardType         byte                                              //卡类型，1-普通卡，2-残疾人卡，3-黑名单卡，4-巡更卡，5-胁迫卡，6-超级卡，7-来宾卡，8-解除卡，9-员工卡，10-应急卡，11-应急管理卡（用于授权临时卡权限，本身不能开门），默认普通卡
+	ByLeaderCard       byte                                              //是否为首卡，1-是，0-否
+	ByUserType         byte                                              // 0 – 普通用户1 - 管理员用户;
+	ByDoorRight        [MAX_DOOR_NUM_256]byte                            //门权限(楼层权限、锁权限)，按位表示，1为有权限，0为无权限，从低位到高位表示对门（锁）1-N是否有权限
+	StruValid          NET_DVR_VALID_PERIOD_CFG                          //有效期参数
+	ByBelongGroup      [MAX_GROUP_NUM_128]byte                           //所属群组，按字节表示，1-属于，0-不属于
+	ByCardPassword     [CARD_PASSWORD_LEN]byte                           //卡密码
+	WCardRightPlan     [MAX_DOOR_NUM_256][MAX_CARD_RIGHT_PLAN_NUM]uint16 //卡权限计划，取值为计划模板编号，同个门（锁）不同计划模板采用权限或的方式处理
+	DwMaxSwipeTime     uint32                                            //最大刷卡次数，0为无次数限制（开锁次数）
+	DwSwipeTime        uint32                                            //已刷卡次数
+	WRoomNumber        uint16                                            //房间号
+	WFloorNumber       int16                                             //层号
+	DwEmployeeNo       uint32                                            //工号（用户ID）
+	ByName             [NAME_LEN]byte                                    //姓名
+	WDepartmentNo      uint16                                            //部门编号
+	WSchedulePlanNo    uint16                                            //排班计划编号
+	BySchedulePlanType byte                                              //排班计划类型：0-无意义、1-个人、2-部门
+	ByRightType        byte                                              //下发权限类型：0-普通发卡权限、1-二维码权限、2-蓝牙权限（可视对讲设备二维码权限配置项：房间号、卡号（虚拟卡号）、最大刷卡次数（开锁次数）、有效期参数；蓝牙权限：卡号（萤石APP账号）、其他参数配置与普通发卡权限一致）
+	ByRes2             [2]byte
+	DwLockID           uint32                  //锁ID
+	ByLockCode         [MAX_LOCK_CODE_LEN]byte //锁代码
+	ByRoomCode         [MAX_DOOR_CODE_LEN]byte //房间代码
+	//按位表示，0-无权限，1-有权限
+	//第0位表示：弱电报警
+	//第1位表示：开门提示音
+	//第2位表示：限制客卡
+	//第3位表示：通道
+	//第4位表示：反锁开门
+	//第5位表示：巡更功能
+	DwCardRight     uint32 //卡权限
+	DwPlanTemplate  uint32 //计划模板(每天)各时间段是否启用，按位表示，0--不启用，1-启用
+	DwCardUserId    uint32 //持卡人ID
+	ByCardModelType byte   //0-空，1- MIFARE S50，2- MIFARE S70，3- FM1208 CPU卡，4- FM1216 CPU卡，5-国密CPU卡，6-身份证，7- NFC
+	ByRes3          [51]byte
+	BySIMNum        [NAME_LEN] /*32*/ byte //SIM卡号（手机号）
+}
+
+type LPNET_DVR_CARD_CFG_V50 *NET_DVR_CARD_CFG_V50

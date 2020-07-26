@@ -23,8 +23,8 @@ package hikvision
 #endif
 
 //----------------- See `cfuns.go` file -----------------
-
 void fLoginResultCallBack_cgo (int lUserID, unsigned int dwResult, void* lpDeviceInfo, void* pUser);
+void fRemoteConfigCallback_cgo (DWORD dwType, void* lpBuffer, DWORD dwBufLen, void* pUserData);
 */
 import "C"
 import (
@@ -346,6 +346,66 @@ func fLoginResultCallBackGo(lUserID int, dwResult uint, lpDeviceInfo C.LPNET_DVR
 // 用户注销
 func NET_DVR_Logout(lUserID int) bool {
 	return goBOOL(C.NET_DVR_Logout(C.LONG(lUserID)))
+}
+
+/************************* 网络参数配置 *************************/
+
+// key: pUser's pointer
+// value: cached function
+var remoteConfigCbMap = make(map[uintptr]remoteConfigCbConf)
+
+// 回调函数配置
+type remoteConfigCbConf struct {
+	cb FRemoteConfigCallback
+	// pUserData 是否为内部初始化
+	innerInitial bool
+}
+
+// 启动远程配置
+// See https://open.hikvision.com/hardware/definitions/NET_DVR_StartRemoteConfig_ACS.html
+func NET_DVR_StartRemoteConfig(lUserID int, dwCommand uint32, lpInBuffer unsafe.Pointer, dwInBufferLen uintptr, cbStateCallback FRemoteConfigCallback, pUserData unsafe.Pointer) int {
+	cache := remoteConfigCbConf{}
+	cache.cb = cbStateCallback
+	// 初始化 pUserData，该值会在 cgo 回调函数中返回
+	if nil == pUserData {
+		cbTokenId := 0
+		pUserData = unsafe.Pointer(&cbTokenId)
+		cache.innerInitial = true
+	}
+	// 保存 golang 回调函数，通过 cgo 回调函数，通过 pUserData 的地址，获取和调用 golang 的函数
+	index := uintptr(pUserData)
+	remoteConfigCbMap[index] = cache
+
+	return int(C.NET_DVR_StartRemoteConfig(
+		C.LONG(lUserID),
+		C.DWORD(dwCommand),
+		C.LPVOID(lpInBuffer),
+		C.DWORD(dwInBufferLen),
+		(C.fRemoteConfigCallback)(C.fRemoteConfigCallback_cgo),
+		C.LPVOID(pUserData),
+	))
+}
+
+// 远程配置回调函数
+//export fRemoteConfigCallbackGo
+func fRemoteConfigCallbackGo(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint32, pUserData unsafe.Pointer) {
+	errMsg := "Not found `FRemoteConfigCallback` function in fRemoteConfigCallbackGo function."
+	// 根据 pUserData 地址查询 golang 函数，如果为 nil 则无法找到
+	if nil == pUserData {
+		panic(errMsg)
+	}
+	// golang 定义的回调函数
+	conf := remoteConfigCbMap[uintptr(pUserData)]
+	// 回调函数不存在
+	if nil == conf.cb {
+		panic(errMsg)
+	}
+	// 内部初始化，则清空 pUserData
+	if conf.innerInitial {
+		pUserData = nil
+	}
+
+	conf.cb(dwType, lpBuffer, dwBufLen, pUserData)
 }
 
 // TODO: split to another source file, but missing C.BOOL when build.
