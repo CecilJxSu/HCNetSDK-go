@@ -13,9 +13,7 @@ func main() {
 	success := hik.NET_DVR_Init()
 	if !success {
 		// 初始化失败
-		errCode := hik.NET_DVR_GetLastError()
-		fmt.Println("Not success, error code: ", errCode)
-		fmt.Println("Error message: " + hik.NET_DVR_GetErrorMsg(errCode))
+		printError("Initial failed")
 		return
 	}
 
@@ -34,14 +32,19 @@ func main() {
 	// 登陆
 	result := hik.NET_DVR_Login_V40(&loginInfo, &deviceInfo)
 	if -1 == result {
-		errCode := hik.NET_DVR_GetLastError()
-		fmt.Println("Login failed, error code: ", errCode)
-		fmt.Println("Error message: " + hik.NET_DVR_GetErrorMsg(errCode))
+		printError("Login failed")
 	}
 
 	// hang on for testing async callback
 	hangOn := make(chan int)
 	<-hangOn
+}
+
+// 打印错误信息
+func printError(desc string) {
+	errCode := hik.NET_DVR_GetLastError()
+	fmt.Println(desc, ", error code: ", errCode)
+	fmt.Println("Error message: " + hik.NET_DVR_GetErrorMsg(errCode))
 }
 
 // 登陆异步回调函数
@@ -57,7 +60,11 @@ func loginCallback(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVI
 	// 获取卡
 	cardInfo := hik.NET_DVR_CARD_CFG_COND{}
 	cardInfo.DwSize = uint32(unsafe.Sizeof(cardInfo))
-	cardInfo.DwCardNum = 0xffffffff
+	// 获取所有卡信息，不需要调 NET_DVR_StartRemoteConfig 接口指定查询条件
+	// cardInfo.DwCardNum = 0xffffffff
+
+	// 需要调 NET_DVR_StartRemoteConfig 接口，指定查询条件
+	cardInfo.DwCardNum = 1
 	cardInfo.ByCheckCardNo = 1
 	// 回调函数
 	cb := remoteConfigCallback
@@ -73,9 +80,17 @@ func loginCallback(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVI
 	)
 	// -1 失败，其它值为长连接句柄
 	if -1 == lHandle {
-		errCode := hik.NET_DVR_GetLastError()
-		fmt.Println("Start remote failed, error code: ", errCode)
-		fmt.Println("Error message: " + hik.NET_DVR_GetErrorMsg(errCode))
+		printError("Start remote failed")
+	}
+
+	// 发送查询条件
+	queryBuf := hik.NET_DVR_CARD_CFG_SEND_DATA{}
+	copy(queryBuf.ByCardNo[:], "123")
+	structSize := uint32(unsafe.Sizeof(queryBuf))
+	queryBuf.DwSize = structSize
+	success := hik.NET_DVR_SendRemoteConfig(lHandle, hik.ENUM_ACS_SEND_DATA, (*byte)(unsafe.Pointer(&queryBuf)), structSize)
+	if !success {
+		printError("Send remote config failed")
 	}
 }
 
@@ -95,5 +110,6 @@ func remoteConfigCallback(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint3
 		fmt.Println("byCardNo: ", string(cardCfg.ByCardNo[:]))
 		fmt.Println("byCardValid: ", cardCfg.ByCardValid)
 		fmt.Println("byCardType: ", cardCfg.ByCardType)
+		fmt.Println("dwCardUserId: ", cardCfg.DwCardUserId)
 	}
 }

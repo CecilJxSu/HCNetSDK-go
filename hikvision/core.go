@@ -338,6 +338,10 @@ var loginChan = make(chan FLoginResultCallBack, 1)
 
 //export fLoginResultCallBackGo
 func fLoginResultCallBackGo(lUserID int, dwResult uint, lpDeviceInfo C.LPNET_DVR_DEVICEINFO_V30, pUser unsafe.Pointer) {
+	if nil == lpDeviceInfo {
+		(<-loginChan)(lUserID, uint32(dwResult), &NET_DVR_DEVICEINFO_V30{}, pUser)
+		return
+	}
 	deviceInfo := convert_NET_DVR_DEVICEINFO_V30(*lpDeviceInfo)
 	// 从通道中获取回调函数
 	(<-loginChan)(lUserID, uint32(dwResult), &deviceInfo, pUser)
@@ -406,6 +410,17 @@ func fRemoteConfigCallbackGo(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen ui
 	}
 
 	conf.cb(dwType, lpBuffer, dwBufLen, pUserData)
+}
+
+// 发送长连接数据
+// See https://open.hikvision.com/hardware/definitions/NET_DVR_SendRemoteConfig_ACS.html?_blank
+func NET_DVR_SendRemoteConfig(lHandle int, dwDataType CFG_SEND_DATA_TYPE, pSendBuf *byte, dwBufSize uint32) bool {
+	return goBOOL(C.NET_DVR_SendRemoteConfig(
+		C.LONG(lHandle),
+		C.DWORD(dwDataType),
+		(*C.char)(unsafe.Pointer(pSendBuf)),
+		C.DWORD(dwBufSize),
+	))
 }
 
 // TODO: split to another source file, but missing C.BOOL when build.
