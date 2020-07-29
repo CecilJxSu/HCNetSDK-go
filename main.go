@@ -60,6 +60,50 @@ func loginCallback(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVI
 	fmt.Println("异步登陆成功，userId: ", strconv.Itoa(lUserID))
 	fmt.Println("设备序列号: ", string(lpDeviceInfo.SSerialNumber[:]))
 
+	// 设置卡参数
+	setCardInfo := hik.NET_DVR_CARD_CFG_COND{}
+	setCardInfo.DwSize = uint32(unsafe.Sizeof(setCardInfo))
+	setCardInfo.DwCardNum = 1
+	setCardInfo.ByCheckCardNo = 1
+	// 设置卡
+	lHandle := hik.NET_DVR_StartRemoteConfig(
+		lUserID,
+		hik.NET_DVR_SET_CARD_CFG_V50,
+		unsafe.Pointer(&setCardInfo),
+		unsafe.Sizeof(setCardInfo),
+		remoteConfigCallback,
+		nil,
+	)
+
+	// -1 失败，其它值为长连接句柄
+	if -1 == lHandle {
+		printError("Start remote failed")
+	}
+
+	// 下发卡参数
+	setCardBuf := hik.NET_DVR_CARD_CFG_V50{}
+	structSize := uint32(unsafe.Sizeof(setCardBuf))
+	setCardBuf.DwSize = structSize
+	copy(setCardBuf.ByCardNo[:], "957005719")
+	// 设置：卡是否有效参数; 首卡参数
+	setCardBuf.DwModifyParamType = 0x00000001 | 0x00000010
+	setCardBuf.ByCardValid = 1
+	setCardBuf.ByLeaderCard = 1
+	// 发送卡参数
+	success := hik.NET_DVR_SendRemoteConfig(lHandle, hik.ENUM_ACS_SEND_DATA, (*byte)(unsafe.Pointer(&setCardBuf)), structSize)
+	if !success {
+		printError("Send remote config failed")
+		sendRemoteFinished <- true
+	}
+
+	<-sendRemoteFinished
+
+	// 关闭长连接
+	success = hik.NET_DVR_StopRemoteConfig(lHandle)
+	if !success {
+		printError("Stop remote config failed")
+	}
+
 	// 获取卡
 	cardInfo := hik.NET_DVR_CARD_CFG_COND{}
 	cardInfo.DwSize = uint32(unsafe.Sizeof(cardInfo))
@@ -73,7 +117,7 @@ func loginCallback(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVI
 	cb := remoteConfigCallback
 
 	// 获取卡参数
-	lHandle := hik.NET_DVR_StartRemoteConfig(
+	lHandle = hik.NET_DVR_StartRemoteConfig(
 		lUserID,
 		hik.NET_DVR_GET_CARD_CFG_V50,
 		unsafe.Pointer(&cardInfo),
@@ -88,10 +132,10 @@ func loginCallback(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVI
 
 	// 发送查询条件
 	queryBuf := hik.NET_DVR_CARD_CFG_SEND_DATA{}
-	copy(queryBuf.ByCardNo[:], "123")
-	structSize := uint32(unsafe.Sizeof(queryBuf))
+	structSize = uint32(unsafe.Sizeof(queryBuf))
 	queryBuf.DwSize = structSize
-	success := hik.NET_DVR_SendRemoteConfig(lHandle, hik.ENUM_ACS_SEND_DATA, (*byte)(unsafe.Pointer(&queryBuf)), structSize)
+	copy(queryBuf.ByCardNo[:], "957005719")
+	success = hik.NET_DVR_SendRemoteConfig(lHandle, hik.ENUM_ACS_SEND_DATA, (*byte)(unsafe.Pointer(&queryBuf)), structSize)
 	if !success {
 		printError("Send remote config failed")
 		sendRemoteFinished <- true
@@ -118,6 +162,14 @@ func remoteConfigCallback(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint3
 		dwStatus := binary.LittleEndian.Uint32(dwStatusArr[:])
 		fmt.Println("dwStatus: ", dwStatus)
 		fmt.Println("dwBufLen: ", dwBufLen)
+
+		switch dwStatus {
+		// 处理中
+		case uint32(hik.NET_SDK_CALLBACK_STATUS_PROCESSING):
+			dwStatusArr := *(*[4 + 32]byte)(lpBuffer)
+			fmt.Println("Processing, cardNo: ", string(dwStatusArr[4:]))
+			return
+		}
 
 		// 断开长链接
 		sendRemoteFinished <- true
