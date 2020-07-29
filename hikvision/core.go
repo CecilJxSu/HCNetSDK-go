@@ -423,20 +423,7 @@ func NET_DVR_SendRemoteConfig(lHandle int, dwDataType CFG_SEND_DATA_TYPE, pSendB
 	))
 }
 
-// TODO: split to another source file, but missing C.BOOL when build.
-/******************* golang and cgo type convert each other *******************/
-// C.BOOL --> go bool
-func goBOOL(flag C.BOOL) bool {
-	if flag == 1 {
-		return true
-	}
-	return false
-}
-
-// go bool --> C.BOOL
-func cBOOL(flag bool) C.BOOL {
-	if flag {
-		return C.BOOL(1)
-	}
-	return C.BOOL(0)
+// 关闭长连接配置接口所创建的句柄，释放资源
+func NET_DVR_StopRemoteConfig(lHandle int) bool {
+	return goBOOL(C.NET_DVR_StopRemoteConfig(C.LONG(lHandle)))
 }

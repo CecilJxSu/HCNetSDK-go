@@ -11,6 +11,9 @@ import (
 func main() {
 	// 初始化
 	success := hik.NET_DVR_Init()
+	// 设置连接超时时间与重连功能
+	success = !success || hik.NET_DVR_SetConnectTime(2000, 1)
+	success = !success || hik.NET_DVR_SetReconnect(10000, true)
 	if !success {
 		// 初始化失败
 		printError("Initial failed")
@@ -91,8 +94,21 @@ func loginCallback(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVI
 	success := hik.NET_DVR_SendRemoteConfig(lHandle, hik.ENUM_ACS_SEND_DATA, (*byte)(unsafe.Pointer(&queryBuf)), structSize)
 	if !success {
 		printError("Send remote config failed")
+		sendRemoteFinished <- true
+	}
+
+	// 下发参数是否结束
+	<-sendRemoteFinished
+
+	// 关闭长连接
+	success = hik.NET_DVR_StopRemoteConfig(lHandle)
+	if !success {
+		printError("Stop remote config failed")
 	}
 }
+
+// 下发参数是否结束
+var sendRemoteFinished = make(chan bool, 1)
 
 // 远程配置回调函数
 func remoteConfigCallback(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint32, pUserData unsafe.Pointer) {
@@ -102,6 +118,9 @@ func remoteConfigCallback(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint3
 		dwStatus := binary.LittleEndian.Uint32(dwStatusArr[:])
 		fmt.Println("dwStatus: ", dwStatus)
 		fmt.Println("dwBufLen: ", dwBufLen)
+
+		// 断开长链接
+		sendRemoteFinished <- true
 	} else if dwType == 1 {
 		progress := *(*int)(lpBuffer)
 		fmt.Println("progress: ", progress)
