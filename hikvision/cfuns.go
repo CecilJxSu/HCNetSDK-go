@@ -74,3 +74,8 @@ func cBOOL(flag bool) C.BOOL {
 	}
 	return C.BOOL(0)
 }
+
+// 数组指针转成 go 切片
+func GoBytes(pointer unsafe.Pointer, size uint32) []byte {
+	return C.GoBytes(pointer, C.int(size))
+}

@@ -427,3 +427,18 @@ func NET_DVR_SendRemoteConfig(lHandle int, dwDataType CFG_SEND_DATA_TYPE, pSendB
 func NET_DVR_StopRemoteConfig(lHandle int) bool {
 	return goBOOL(C.NET_DVR_StopRemoteConfig(C.LONG(lHandle)))
 }
+
+/************************* 获取能力集 *************************/
+
+// 获取能力集
+func NET_DVR_GetDeviceAbility(lUserID int, dwAbilityType uint32, pInBuf string, pOutBuf unsafe.Pointer, dwOutLength uint32) bool {
+	_pInBuf := []byte(pInBuf)
+	return goBOOL(C.NET_DVR_GetDeviceAbility(
+		C.LONG(lUserID),
+		C.DWORD(dwAbilityType),
+		(*C.char)(unsafe.Pointer(&_pInBuf[0])),
+		C.DWORD(len(pInBuf)),
+		(*C.char)(pOutBuf),
+		C.DWORD(dwOutLength),
+	))
+}
