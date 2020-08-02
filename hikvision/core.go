@@ -342,9 +342,9 @@ func fLoginResultCallBackGo(lUserID int, dwResult uint, lpDeviceInfo C.LPNET_DVR
 		(<-loginChan)(lUserID, uint32(dwResult), &NET_DVR_DEVICEINFO_V30{}, pUser)
 		return
 	}
-	deviceInfo := convert_NET_DVR_DEVICEINFO_V30(*lpDeviceInfo)
+	pDeviceInfo := (LPNET_DVR_DEVICEINFO_V30)(unsafe.Pointer(lpDeviceInfo))
 	// 从通道中获取回调函数
-	(<-loginChan)(lUserID, uint32(dwResult), &deviceInfo, pUser)
+	(<-loginChan)(lUserID, uint32(dwResult), pDeviceInfo, pUser)
 }
 
 // 用户注销
