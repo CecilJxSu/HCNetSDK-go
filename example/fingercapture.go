@@ -40,6 +40,7 @@ func FingerCaptureExample() {
 	result := hik.NET_DVR_Login_V40(&loginInfo, &deviceInfo)
 	if -1 == result {
 		printError("Login failed")
+		hangOnForFingerCapture <- false
 	}
 
 	// hang on for testing async callback
@@ -56,6 +57,7 @@ func loginCallbackForFingerCapture(lUserID int, dwResult uint32, lpDeviceInfo hi
 	if 1 != dwResult {
 		fmt.Println("异步登陆失败")
 		printError("Login failed")
+		hangOnForFingerCapture <- false
 		return
 	}
 

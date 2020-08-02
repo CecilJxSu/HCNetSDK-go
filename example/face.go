@@ -41,6 +41,7 @@ func FaceExample() {
 	result := hik.NET_DVR_Login_V40(&loginInfo, &deviceInfo)
 	if -1 == result {
 		printError("Login failed")
+		hangOnForFaceExample <- false
 	}
 
 	// hang on for testing async callback
@@ -57,6 +58,7 @@ func loginCallbackForFaceExample(lUserID int, dwResult uint32, lpDeviceInfo hik.
 	if 1 != dwResult {
 		fmt.Println("异步登陆失败")
 		printError("Login failed")
+		hangOnForFaceExample <- false
 		return
 	}
 
@@ -234,7 +236,7 @@ func writeFaceImg(faceBuffer unsafe.Pointer, size uint32) {
 
 	// 目录
 	dir := os.TempDir() + "/hik_face"
-	err := os.Mkdir(dir, os.ModePerm)
+	err := os.MkdirAll(dir, os.ModePerm)
 	if nil != err {
 		sendRemoteFinishedForFaceExample <- false
 		log.Fatal("Cannot create temporary dir", err)

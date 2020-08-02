@@ -41,6 +41,7 @@ func FingerprintExample() {
 	result := hik.NET_DVR_Login_V40(&loginInfo, &deviceInfo)
 	if -1 == result {
 		printError("Login failed")
+		hangOnForFingerPrint <- false
 	}
 
 	// hang on for testing async callback
@@ -57,6 +58,7 @@ func loginCallbackForFingerPrint(lUserID int, dwResult uint32, lpDeviceInfo hik.
 	if 1 != dwResult {
 		fmt.Println("异步登陆失败")
 		printError("Login failed")
+		hangOnForFingerPrint <- false
 		return
 	}
 
@@ -224,7 +226,7 @@ func readFingerPrintData(filePath string) []byte {
 func writePrintData(printData []byte, size uint32) {
 	// 目录
 	dir := os.TempDir() + "/hik_finger"
-	err := os.Mkdir(dir, os.ModePerm)
+	err := os.MkdirAll(dir, os.ModePerm)
 	if nil != err {
 		sendRemoteFinishedForFingerPrint <- false
 		log.Fatal("Cannot create temporary dir", err)

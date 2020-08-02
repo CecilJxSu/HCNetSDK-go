@@ -40,6 +40,7 @@ func FaceCaptureExample() {
 	result := hik.NET_DVR_Login_V40(&loginInfo, &deviceInfo)
 	if -1 == result {
 		printError("Login failed")
+		hangOnForFaceCapture <- false
 	}
 
 	// hang on for testing async callback
@@ -56,6 +57,7 @@ func loginCallbackForFaceCapture(lUserID int, dwResult uint32, lpDeviceInfo hik.
 	if 1 != dwResult {
 		fmt.Println("异步登陆失败")
 		printError("Login failed")
+		hangOnForFaceCapture <- false
 		return
 	}
 
