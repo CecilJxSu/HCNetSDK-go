@@ -499,6 +499,27 @@ func NET_DVR_CloseAlarmChan_V30(lAlarmHandle int) bool {
 	return goBOOL(C.NET_DVR_CloseAlarmChan_V30(C.LONG(lAlarmHandle)))
 }
 
+/************************* 远程反控 *************************/
+
+// 远程门禁控制或梯控控制
+func NET_DVR_ControlGateway(lUserID int, lGatewayIndex int, dwStaic uint32) bool {
+	return goBOOL(C.NET_DVR_ControlGateway(
+		C.LONG(lUserID),
+		C.LONG(lGatewayIndex),
+		C.DWORD(dwStaic),
+	))
+}
+
+// 辅助功能控制
+func NET_DVR_AlarmHostAssistantControl(lUserID int, dwType uint32, dwNumber uint32, dwCmdParam uint32) bool {
+	return goBOOL(C.NET_DVR_AlarmHostAssistantControl(
+		C.LONG(lUserID),
+		C.DWORD(dwType),
+		C.DWORD(dwNumber),
+		C.DWORD(dwCmdParam),
+	))
+}
+
 /************************* 获取能力集 *************************/
 
 // 获取能力集
