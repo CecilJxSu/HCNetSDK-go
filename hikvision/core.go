@@ -25,6 +25,7 @@ package hikvision
 //----------------- See `cfuns.go` file -----------------
 void fLoginResultCallBack_cgo (int lUserID, unsigned int dwResult, void* lpDeviceInfo, void* pUser);
 void fRemoteConfigCallback_cgo (DWORD dwType, void* lpBuffer, DWORD dwBufLen, void* pUserData);
+BOOL msgCallBack_V31_cgo (LONG lCommand, void* pAlarmer, char *pAlarmInfo, DWORD dwBufLen, void* pUser);
 */
 import "C"
 import (
@@ -426,6 +427,76 @@ func NET_DVR_SendRemoteConfig(lHandle int, dwDataType CFG_SEND_DATA_TYPE, pSendB
 // 关闭长连接配置接口所创建的句柄，释放资源
 func NET_DVR_StopRemoteConfig(lHandle int) bool {
 	return goBOOL(C.NET_DVR_StopRemoteConfig(C.LONG(lHandle)))
+}
+
+/************************* 报警布防 *************************/
+
+// 注册回调函数，接收设备报警消息等
+func NET_DVR_SetDVRMessageCallBack_V31(fMessageCallBack MSGCallBack_V31, pUser unsafe.Pointer) bool {
+	cache := dvrMsgCbConf{}
+	cache.cb = fMessageCallBack
+	// 初始化 pUserData，该值会在 cgo 回调函数中返回
+	if nil == pUser {
+		cbTokenId := 0
+		pUser = unsafe.Pointer(&cbTokenId)
+		cache.innerInitial = true
+	}
+	// 保存 golang 回调函数，通过 cgo 回调函数，通过 pUserData 的地址，获取和调用 golang 的函数
+	index := uintptr(pUser)
+	dvrMsgCbMap[index] = cache
+
+	return goBOOL(C.NET_DVR_SetDVRMessageCallBack_V31(
+		(C.MSGCallBack_V31)(C.msgCallBack_V31_cgo),
+		pUser,
+	))
+}
+
+// key: pUser's pointer
+// value: cached function
+var dvrMsgCbMap = make(map[uintptr]dvrMsgCbConf)
+
+// 回调函数配置
+type dvrMsgCbConf struct {
+	cb MSGCallBack_V31
+	// pUserData 是否为内部初始化
+	innerInitial bool
+}
+
+// 报警布防回调函数
+//export msgCallBack_V31_Go
+func msgCallBack_V31_Go(lCommand int, pAlarmer C.LPNET_DVR_ALARMER, pAlarmInfo *byte, dwBufLen uint32, pUser unsafe.Pointer) C.BOOL {
+	errMsg := "Not found `MSGCallBack_V31` function in msgCallBack_V31_Go function."
+	// 根据 pUserData 地址查询 golang 函数，如果为 nil 则无法找到
+	if nil == pUser {
+		panic(errMsg)
+	}
+	// golang 定义的回调函数
+	conf := dvrMsgCbMap[uintptr(pUser)]
+	// 回调函数不存在
+	if nil == conf.cb {
+		panic(errMsg)
+	}
+	// 内部初始化，则清空 pUserData
+	if conf.innerInitial {
+		pUser = nil
+	}
+
+	_pAlarmer := (LPNET_DVR_ALARMER)(unsafe.Pointer(pAlarmer))
+
+	return cBOOL(conf.cb(lCommand, _pAlarmer, pAlarmInfo, dwBufLen, pUser))
+}
+
+// 建立报警上传通道，获取报警等信息
+func NET_DVR_SetupAlarmChan_V41(lUserID int, lpSetupParam LPNET_DVR_SETUPALARM_PARAM) int {
+	return int(C.NET_DVR_SetupAlarmChan_V41(
+		C.LONG(lUserID),
+		C.LPNET_DVR_SETUPALARM_PARAM(unsafe.Pointer(lpSetupParam)),
+	))
+}
+
+// 撤销报警上传通道
+func NET_DVR_CloseAlarmChan_V30(lAlarmHandle int) bool {
+	return goBOOL(C.NET_DVR_CloseAlarmChan_V30(C.LONG(lAlarmHandle)))
 }
 
 /************************* 获取能力集 *************************/

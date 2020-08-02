@@ -8,14 +8,22 @@ package hikvision
 
 // See https://github.com/golang/go/wiki/cgo#function-pointer-callbacks
 
+// 异步登陆回调函数
 void fLoginResultCallBack_cgo (int lUserID, unsigned int dwResult, LPNET_DVR_DEVICEINFO_V30 lpDeviceInfo, void* pUser) {
     void fLoginResultCallBackGo(int, unsigned int, void*, void*);
     fLoginResultCallBackGo(lUserID, dwResult, lpDeviceInfo, pUser);
 }
 
+// 远程配置回调函数
 void fRemoteConfigCallback_cgo (DWORD dwType, void* lpBuffer, DWORD dwBufLen, void* pUserData) {
     void fRemoteConfigCallbackGo(DWORD, void*, DWORD, void*);
     fRemoteConfigCallbackGo(dwType, lpBuffer, dwBufLen, pUserData);
+}
+
+// 报警布防回调函数
+BOOL msgCallBack_V31_cgo (LONG lCommand, LPNET_DVR_ALARMER pAlarmer, char *pAlarmInfo, DWORD dwBufLen, void* pUser) {
+    BOOL msgCallBack_V31_Go(LONG, void*, char*, DWORD, void*);
+    return msgCallBack_V31_Go(lCommand, pAlarmer, pAlarmInfo, dwBufLen, pUser);
 }
 */
 import "C"

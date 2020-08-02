@@ -732,3 +732,135 @@ type NET_DVR_CAPTURE_FINGERPRINT_CFG struct {
 	ByRes                 [62]byte
 }
 type LPNET_DVR_CAPTURE_FINGERPRINT_CFG *NET_DVR_CAPTURE_FINGERPRINT_CFG
+
+/************************* 报警布防 *************************/
+
+// 登录状态回调函数
+// true - 数据接收成功；false - 接收失败
+type MSGCallBack_V31 func(lCommand int, pAlarmer LPNET_DVR_ALARMER, pAlarmInfo *byte, dwBufLen uint32, pUser unsafe.Pointer) bool
+
+//报警设备信息
+type NET_DVR_ALARMER struct {
+	ByUserIDValid     byte               /* userid是否有效 0-无效，1-有效 */
+	BySerialValid     byte               /* 序列号是否有效 0-无效，1-有效 */
+	ByVersionValid    byte               /* 版本号是否有效 0-无效，1-有效 */
+	ByDeviceNameValid byte               /* 设备名字是否有效 0-无效，1-有效 */
+	ByMacAddrValid    byte               /* MAC地址是否有效 0-无效，1-有效 */
+	ByLinkPortValid   byte               /* login端口是否有效 0-无效，1-有效 */
+	ByDeviceIPValid   byte               /* 设备IP是否有效 0-无效，1-有效 */
+	BySocketIPValid   byte               /* socket ip是否有效 0-无效，1-有效 */
+	LUserID           int                /* NET_DVR_Login()返回值, 布防时有效 */
+	SSerialNumber     [SERIALNO_LEN]byte /* 序列号 */
+	DwDeviceVersion   uint32             /* 版本信息 高16位表示主版本，低16位表示次版本*/
+	SDeviceName       [NAME_LEN]byte     /* 设备名字 */
+	ByMacAddr         [MACADDR_LEN]byte  /* MAC地址 */
+	WLinkPort         uint16             /* link port */
+	SDeviceIP         [128]byte          /* IP地址 */
+	SSocketIP         [128]byte          /* 报警主动上传时的socket IP地址 */
+	ByIpProtocol      byte               /* Ip协议 0-IPV4, 1-IPV6 */
+	ByRes1            [2]byte
+	BJSONBroken       byte //JSON断网续传标志。0：不续传；1：续传
+	WSocketPort       uint32
+	ByRes2            [6]byte
+}
+type LPNET_DVR_ALARMER *NET_DVR_ALARMER
+
+// 报警布防参数结构体
+// See https://open.hikvision.com/hardware/structures/NET_DVR_SETUPALARM_PARAM.html
+type NET_DVR_SETUPALARM_PARAM struct {
+	DwSize              uint32
+	ByLevel             byte //布防优先级，0-一等级（高），1-二等级（中），2-三等级（低）
+	ByAlarmInfoType     byte //上传报警信息类型（抓拍机支持），0-老报警信息（NET_DVR_PLATE_RESULT），1-新报警信息(NET_ITS_PLATE_RESULT)2012-9-28
+	ByRetAlarmTypeV40   byte //0--返回NET_DVR_ALARMINFO_V30或NET_DVR_ALARMINFO, 1--设备支持NET_DVR_ALARMINFO_V40则返回NET_DVR_ALARMINFO_V40，不支持则返回NET_DVR_ALARMINFO_V30或NET_DVR_ALARMINFO
+	ByRetDevInfoVersion byte //CVR上传报警信息回调结构体版本号 0-COMM_ALARM_DEVICE， 1-COMM_ALARM_DEVICE_V40
+	ByRetVQDAlarmType   byte //VQD报警上传类型，0-上传报报警NET_DVR_VQD_DIAGNOSE_INFO，1-上传报警NET_DVR_VQD_ALARM
+	//1-表示人脸侦测报警扩展(INTER_FACE_DETECTION),0-表示原先支持结构(INTER_FACESNAP_RESULT)
+	ByFaceAlarmDetection byte
+	//Bit0- 表示二级布防是否上传图片: 0-上传，1-不上传
+	//Bit1- 表示开启数据上传确认机制；0-不开启，1-开启
+	//Bit6- 表示雷达检测报警(eventType:radarDetection)是否开启实时上传；0-不开启，1-开启（用于web插件实时显示雷达目标轨迹）
+	BySupport byte
+	//断网续传类型
+	//bit0-车牌检测（IPC） （0-不续传，1-续传）
+	//bit1-客流统计（IPC）  （0-不续传，1-续传）
+	//bit2-热度图统计（IPC） （0-不续传，1-续传）
+	//bit3-人脸抓拍（IPC） （0-不续传，1-续传）
+	//bit4-人脸对比（IPC） （0-不续传，1-续传）
+	ByBrokenNetHttp byte
+	WTaskNo         uint16 //任务处理号 和 (上传数据NET_DVR_VEHICLE_RECOG_RESULT中的字段dwTaskNo对应 同时 下发任务结构 NET_DVR_VEHICLE_RECOG_COND中的字段dwTaskNo对应)
+	ByDeployType    byte   //布防类型：0-客户端布防，1-实时布防
+	BySubScription  byte   //订阅，按位表示，未开启订阅不上报  //占位
+	//Bit7-移动侦测人车分类是否传图；0-不传图(V30上报)，1-传图(V40上报)
+	ByRes1         [2]byte
+	ByAlarmTypeURL byte //bit0-表示人脸抓拍报警上传（INTER_FACESNAP_RESULT）；0-表示二进制传输，1-表示URL传输（设备支持的情况下，设备支持能力根据具体报警能力集判断,同时设备需要支持URL的相关服务，当前是”云存储“）
+	//bit1-表示EVENT_JSON中图片数据长传类型；0-表示二进制传输，1-表示URL传输（设备支持的情况下，设备支持能力根据具体报警能力集判断）
+	//bit2 - 人脸比对(报警类型为COMM_SNAP_MATCH_ALARM)中图片数据上传类型：0 - 二进制传输，1 - URL传输
+	//bit3 - 行为分析(报警类型为COMM_ALARM_RULE)中图片数据上传类型：0 - 二进制传输，1 - URL传输，本字段设备是否支持，对应软硬件能力集中<isSupportBehaviorUploadByCloudStorageURL>节点是否返回且为true
+	ByCustomCtrl byte //Bit0- 表示支持副驾驶人脸子图上传: 0-不上传,1-上传
+}
+type LPNET_DVR_SETUPALARM_PARAM *NET_DVR_SETUPALARM_PARAM
+
+// 门禁主机报警信息结构体
+// See https://open.hikvision.com/hardware/structures/NET_DVR_ACS_ALARM_INFO.html
+type NET_DVR_ACS_ALARM_INFO struct {
+	DwSize               uint32
+	DwMajor              uint32                 //报警主类型，参考宏定义
+	DwMinor              uint32                 //报警次类型，参考宏定义
+	StruTime             NET_DVR_TIME           //时间
+	SNetUser             [MAX_NAMELEN]byte      //网络操作的用户名
+	StruRemoteHostAddr   NET_DVR_IPADDR         //远程主机地址
+	StruAcsEventInfo     NET_DVR_ACS_EVENT_INFO //详细参数
+	DwPicDataLen         uint32                 //图片数据大小，不为0是表示后面带数据
+	PPicData             *byte
+	WInductiveEventType  uint16 //归纳事件类型，0-无效，客户端判断该值为非0值后，报警类型通过归纳事件类型区分，否则通过原有报警主次类型（dwMajor、dwMinor）区分
+	ByPicTransType       byte   //图片数据传输方式: 0-二进制；1-url
+	ByRes1               byte   //保留字节
+	DwIOTChannelNo       uint32 //IOT通道号
+	PAcsEventInfoExtend  *byte  //byAcsEventInfoExtend为1时，表示指向一个NET_DVR_ACS_EVENT_INFO_EXTEND结构体
+	ByAcsEventInfoExtend byte   //pAcsEventInfoExtend是否有效：0-无效，1-有效
+	ByTimeType           byte   //时间类型：0-设备本地时间，1-UTC时间（struTime的时间）
+	ByRes                [10]byte
+}
+type LPNET_DVR_ACS_ALARM_INFO *NET_DVR_ACS_ALARM_INFO
+
+// 主机地址
+type NET_DVR_IPADDR struct {
+	SIpV4  [16]byte  /* IPv4地址 */
+	ByIPv6 [128]byte /* 保留 */
+}
+type LPNET_DVR_IPADDR *NET_DVR_IPADDR
+
+// 详细参数
+type NET_DVR_ACS_EVENT_INFO struct {
+	DwSize                         uint32
+	ByCardNo                       [ACS_CARD_NO_LEN]byte //卡号，为0无效
+	ByCardType                     byte                  //卡类型，1-普通卡，2-残疾人卡，3-黑名单卡，4-巡更卡，5-胁迫卡，6-超级卡，7-来宾卡，8-解除卡，为0无效
+	ByWhiteListNo                  byte                  //白名单单号,1-8，为0无效
+	ByReportChannel                byte                  //报告上传通道，1-布防上传，2-中心组1上传，3-中心组2上传，为0无效
+	ByCardReaderKind               byte                  //读卡器属于哪一类，0-无效，1-IC读卡器，2-身份证读卡器，3-二维码读卡器,4-指纹头
+	DwCardReaderNo                 uint32                //读卡器编号，为0无效
+	DwDoorNo                       uint32                //门编号(楼层编号)，为0无效（当接的设备为人员通道设备时，门1为进方向，门2为出方向）
+	DwVerifyNo                     uint32                //多重卡认证序号，为0无效
+	DwAlarmInNo                    uint32                //报警输入号，为0无效
+	DwAlarmOutNo                   uint32                //报警输出号，为0无效
+	DwCaseSensorNo                 uint32                //事件触发器编号
+	DwRs485No                      uint32                //RS485通道号，为0无效
+	DwMultiCardGroupNo             uint32                //群组编号
+	WAccessChannel                 uint16                //人员通道号
+	ByDeviceNo                     byte                  //设备编号，为0无效
+	ByDistractControlNo            byte                  //分控器编号，为0无效
+	DwEmployeeNo                   uint32                //工号，为0无效
+	WLocalControllerID             uint16                //就地控制器编号，0-门禁主机，1-64代表就地控制器
+	ByInternetAccess               byte                  //网口ID：（1-上行网口1,2-上行网口2,3-下行网口1）
+	ByType                         byte                  //防区类型，0:即时防区,1-24小时防区,2-延时防区 ,3-内部防区，4-钥匙防区 5-火警防区 6-周界防区 7-24小时无声防区  8-24小时辅助防区，9-24小时震动防区,10-门禁紧急开门防区，11-门禁紧急关门防区 0xff-无
+	ByMACAddr                      [MACADDR_LEN]byte     //物理地址，为0无效
+	BySwipeCardType                byte                  //刷卡类型，0-无效，1-二维码
+	ByRes2                         byte
+	DwSerialNo                     uint16 //事件流水号，为0无效
+	ByChannelControllerID          byte   //通道控制器ID，为0无效，1-主通道控制器，2-从通道控制器
+	ByChannelControllerLampID      byte   //通道控制器灯板ID，为0无效（有效范围1-255）
+	ByChannelControllerIRAdaptorID byte   //通道控制器红外转接板ID，为0无效（有效范围1-255）
+	ByChannelControllerIREmitterID byte   //通道控制器红外对射ID，为0无效（有效范围1-255）
+	ByRes                          [4]byte
+}
+type LPNET_DVR_ACS_EVENT_INFO *NET_DVR_ACS_EVENT_INFO
