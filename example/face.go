@@ -122,13 +122,13 @@ func loginCallbackForFaceExample(lUserID int, dwResult uint32, lpDeviceInfo hik.
 
 	<-sendRemoteFinishedForFaceExample
 
-	fmt.Println("=========================")
-
 	// 关闭长连接
 	success = hik.NET_DVR_StopRemoteConfig(lHandle)
 	if !success {
 		printError("Stop remote config failed")
 	}
+
+	fmt.Println("=========================")
 
 	// 获取人脸
 	faceInfo := hik.NET_DVR_FACE_PARAM_COND{}

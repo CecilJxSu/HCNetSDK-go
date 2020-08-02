@@ -606,3 +606,69 @@ type NET_DVR_FACE_PARAM_STATUS struct {
 	ByRes          [130]byte
 }
 type LPNET_DVR_FACE_PARAM_STATUS *NET_DVR_FACE_PARAM_STATUS
+
+// 指纹参数配置条件结构体
+// See https://open.hikvision.com/hardware/structures/NET_DVR_FINGER_PRINT_INFO_COND.html
+type NET_DVR_FINGER_PRINT_INFO_COND struct {
+	DwSize             uint32
+	ByCardNo           [ACS_CARD_NO_LEN]byte         //指纹关联的卡号
+	ByEnableCardReader [MAX_CARD_READER_NUM_512]byte //指纹的读卡器信息，按数组表示
+	DwFingerPrintNum   uint32                        //设置或获取卡数量，获取时置为0xffffffff表示获取所有卡信息
+	ByFingerPrintID    byte                          //手指编号，有效值范围为-10   0xff表示该卡所有指纹
+	ByCallbackMode     byte                          //设备回调方式，0-设备所有读卡器下完了范围，1-在时间段内下了部分也返回
+	ByRes1             [26]byte                      //保留
+}
+type LPNET_DVR_FINGER_PRINT_INFO_COND *NET_DVR_FINGER_PRINT_INFO_COND
+
+// 指纹参数配置结构体
+// See https://open.hikvision.com/hardware/structures/NET_DVR_FINGER_PRINT_CFG.html
+type NET_DVR_FINGER_PRINT_CFG struct {
+	DwSize             uint32
+	ByCardNo           [ACS_CARD_NO_LEN]byte         //指纹关联的卡号
+	DwFingerPrintLen   uint32                        //指纹数据长度
+	ByEnableCardReader [MAX_CARD_READER_NUM_512]byte //需要下发指纹的读卡器，按数组表示，0-不下发该读卡器，1-下发到该读卡器
+	ByFingerPrintID    byte                          //手指编号，有效值范围为1-10
+	ByFingerType       byte                          //指纹类型  0-普通指纹，1-胁迫指纹
+	ByRes1             [30]byte
+	ByFingerData       [MAX_FINGER_PRINT_LEN]byte //指纹数据内容
+	ByRes              [64]byte
+}
+type LPNET_DVR_FINGER_PRINT_CFG *NET_DVR_FINGER_PRINT_CFG
+
+// 指纹状态参数结构体
+// See https://open.hikvision.com/hardware/structures/NET_DVR_FINGER_PRINT_STATUS.html
+type NET_DVR_FINGER_PRINT_STATUS struct {
+	DwSize                 uint32
+	ByCardNo               [ACS_CARD_NO_LEN]byte         //指纹关联的卡号
+	ByCardReaderRecvStatus [MAX_CARD_READER_NUM_512]byte //指纹读卡器状态，按字节表示，0-失败，1-成功，2-该指纹模组不在线，3-重试或指纹质量差，4-内存已满，5-已存在该指纹，6-已存在该指纹ID，7-非法指纹ID，8-该指纹模组无需配置
+	ByFingerPrintID        byte                          //手指编号，有效值范围为1-10
+	ByFingerType           byte                          //指纹类型  0-普通指纹，1-胁迫指纹
+	ByTotalStatus          byte                          //下发总的状态，0-当前指纹未下完所有读卡器，1-已下完所有读卡器(这里的所有指的是门禁主机往所有的读卡器下发了，不管成功与否)
+	ByRes1                 byte
+	ByErrorMsg             [ERROR_MSG_LEN]byte //下发错误信息，当byCardReaderRecvStatus为5时，表示已存在指纹对应的卡号
+	DwCardReaderNo         uint32              //非0表示错误信息byErrMsg有效，其值代表byErrMsg对应的读卡器编号（具体什么错误查看byCardReaderRecvStatus对应编号的值）。0时表示无错误信息
+	ByRes                  [24]byte
+}
+type LPNET_DVR_FINGER_PRINT_STATUS *NET_DVR_FINGER_PRINT_STATUS
+
+// 采集指纹信息条件参数结构体
+type NET_DVR_CAPTURE_FINGERPRINT_COND struct {
+	DwSize               uint32
+	ByFingerPrintPicType byte //图片类型：0-无意义
+	ByFingerNo           byte //手指编号，范围1-10
+	ByRes                [126]byte
+}
+type LPNET_DVR_CAPTURE_FINGERPRINT_COND *NET_DVR_CAPTURE_FINGERPRINT_COND
+
+// 指纹信息采集结果结构体
+type NET_DVR_CAPTURE_FINGERPRINT_CFG struct {
+	DwSize                uint32
+	DwFingerPrintDataSize uint32                     //指纹数据大小
+	ByFingerData          [MAX_FINGER_PRINT_LEN]byte //指纹数据内容
+	DwFingerPrintPicSize  uint32                     //指纹图片大小，等于0时，代表无指纹图片数据
+	PFingerPrintPicBuffer *byte                      //指纹图片缓存
+	ByFingerNo            byte                       //手指编号，范围1-10
+	ByFingerPrintQuality  byte                       //指纹质量，范围1-100
+	ByRes                 [62]byte
+}
+type LPNET_DVR_CAPTURE_FINGERPRINT_CFG *NET_DVR_CAPTURE_FINGERPRINT_CFG
