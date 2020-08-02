@@ -222,8 +222,17 @@ func readFingerPrintData(filePath string) []byte {
 
 // 写指纹到临时文件
 func writePrintData(printData []byte, size uint32) {
+	// 目录
+	dir := os.TempDir() + "/hik_finger"
+	err := os.Mkdir(dir, os.ModePerm)
+	if nil != err {
+		sendRemoteFinishedForFingerPrint <- false
+		log.Fatal("Cannot create temporary dir", err)
+		return
+	}
+
 	// 临时文件
-	tmpFile, err := ioutil.TempFile(os.TempDir()+"/hik_finger", "*.bin")
+	tmpFile, err := ioutil.TempFile(dir, "*.bin")
 	if err != nil {
 		sendRemoteFinishedForFingerPrint <- false
 		log.Fatal("Cannot create temporary file", err)

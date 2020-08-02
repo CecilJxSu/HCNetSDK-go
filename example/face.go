@@ -232,8 +232,17 @@ func readFaceImg(filePath string) []byte {
 func writeFaceImg(faceBuffer unsafe.Pointer, size uint32) {
 	buffer := hik.GoBytes(faceBuffer, size)
 
+	// 目录
+	dir := os.TempDir() + "/hik_face"
+	err := os.Mkdir(dir, os.ModePerm)
+	if nil != err {
+		sendRemoteFinishedForFaceExample <- false
+		log.Fatal("Cannot create temporary dir", err)
+		return
+	}
+
 	// 临时文件
-	tmpFile, err := ioutil.TempFile(os.TempDir()+"/hik_face", "*.jpg")
+	tmpFile, err := ioutil.TempFile(dir, "*.jpg")
 	if err != nil {
 		sendRemoteFinishedForFaceExample <- false
 		log.Fatal("Cannot create temporary file", err)

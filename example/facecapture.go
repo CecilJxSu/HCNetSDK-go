@@ -11,8 +11,8 @@ import (
 	"unsafe"
 )
 
-// 指纹采集
-func FingerCaptureExample() {
+// 人脸采集例子
+func FaceCaptureExample() {
 	// 初始化
 	success := hik.NET_DVR_Init()
 	// 设置连接超时时间与重连功能
@@ -35,7 +35,7 @@ func FingerCaptureExample() {
 	copy(loginInfo.SUserName[:], "<your username>")
 	copy(loginInfo.SPassword[:], "<your password>")
 	// 异步登陆回调函数
-	loginInfo.CbLoginResult = loginCallbackForFingerCapture
+	loginInfo.CbLoginResult = loginCallbackForFaceCapture
 	// 登陆
 	result := hik.NET_DVR_Login_V40(&loginInfo, &deviceInfo)
 	if -1 == result {
@@ -43,16 +43,16 @@ func FingerCaptureExample() {
 	}
 
 	// hang on for testing async callback
-	<-hangOnForFingerCapture
+	<-hangOnForFaceCapture
 
 	// 释放资源
 	hik.NET_DVR_Cleanup()
 }
 
-var hangOnForFingerCapture = make(chan bool)
+var hangOnForFaceCapture = make(chan bool)
 
 // 登陆异步回调函数
-func loginCallbackForFingerCapture(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVICEINFO_V30, pUser unsafe.Pointer) {
+func loginCallbackForFaceCapture(lUserID int, dwResult uint32, lpDeviceInfo hik.LPNET_DVR_DEVICEINFO_V30, pUser unsafe.Pointer) {
 	if 1 != dwResult {
 		fmt.Println("异步登陆失败")
 		printError("Login failed")
@@ -62,29 +62,27 @@ func loginCallbackForFingerCapture(lUserID int, dwResult uint32, lpDeviceInfo hi
 	fmt.Println("异步登陆成功，userId: ", strconv.Itoa(lUserID))
 	fmt.Println("设备序列号: ", string(lpDeviceInfo.SSerialNumber[:]))
 
-	// 采集指纹配置
-	capturePrint := hik.NET_DVR_CAPTURE_FINGERPRINT_COND{}
-	capturePrint.ByFingerPrintPicType = 0
-	capturePrint.DwSize = uint32(unsafe.Sizeof(capturePrint))
-	capturePrint.ByFingerNo = 1
-	// 采集指纹
+	// 采集人脸参数
+	captureFaceInfo := hik.NET_DVR_CAPTURE_FACE_COND{}
+	captureFaceInfo.DwSize = uint32(unsafe.Sizeof(captureFaceInfo))
+	// 采集人脸
 	lHandle := hik.NET_DVR_StartRemoteConfig(
 		lUserID,
-		hik.NET_DVR_CAPTURE_FINGERPRINT_INFO,
-		unsafe.Pointer(&capturePrint),
-		unsafe.Sizeof(capturePrint),
-		remoteConfigCallbackForFingerCapture,
+		hik.NET_DVR_CAPTURE_FACE_INFO,
+		unsafe.Pointer(&captureFaceInfo),
+		unsafe.Sizeof(captureFaceInfo),
+		remoteConfigCallbackForFaceCapture,
 		nil,
 	)
 
 	// -1 失败，其它值为长连接句柄
 	if -1 == lHandle {
 		printError("Start remote failed")
-		hangOnForFingerCapture <- false
+		hangOnForFaceCapture <- false
 		return
 	}
 
-	<-sendRemoteFinishedForFingerCapture
+	<-sendRemoteFinishedForFaceCapture
 
 	// 关闭长连接
 	success := hik.NET_DVR_StopRemoteConfig(lHandle)
@@ -93,14 +91,14 @@ func loginCallbackForFingerCapture(lUserID int, dwResult uint32, lpDeviceInfo hi
 	}
 
 	// 退出应用
-	hangOnForFingerCapture <- true
+	hangOnForFaceCapture <- true
 }
 
 // 下发参数是否结束
-var sendRemoteFinishedForFingerCapture = make(chan bool, 1)
+var sendRemoteFinishedForFaceCapture = make(chan bool, 1)
 
 // 远程配置回调函数
-func remoteConfigCallbackForFingerCapture(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint32, pUserData unsafe.Pointer) {
+func remoteConfigCallbackForFaceCapture(dwType uint32, lpBuffer unsafe.Pointer, dwBufLen uint32, pUserData unsafe.Pointer) {
 	fmt.Println("dwType: ", dwType)
 	if dwType == 0 {
 		dwStatusArr := *(*[4]byte)(lpBuffer)
@@ -108,44 +106,46 @@ func remoteConfigCallbackForFingerCapture(dwType uint32, lpBuffer unsafe.Pointer
 		fmt.Println("dwStatus: ", dwStatus)
 		fmt.Println("dwBufLen: ", dwBufLen)
 		// 断开长链接
-		sendRemoteFinishedForFingerCapture <- true
+		sendRemoteFinishedForFaceCapture <- true
 	} else if dwType == 1 {
 		progress := *(*int)(lpBuffer)
 		fmt.Println("progress: ", progress)
 	} else if dwType == 2 {
-		captureResult := *(hik.LPNET_DVR_CAPTURE_FINGERPRINT_CFG)(lpBuffer)
-		fmt.Println("byFingerNo", captureResult.ByFingerNo)
-		fmt.Println("byFingerPrintQuality", captureResult.ByFingerPrintQuality)
-		// 写指纹到文件中
-		writePrintCaptureData(captureResult.ByFingerData[:], captureResult.DwFingerPrintDataSize)
+		captureResult := *(hik.LPNET_DVR_CAPTURE_FACE_CFG)(lpBuffer)
+		fmt.Println("byCaptureProgress: ", captureResult.ByCaptureProgress)
+		fmt.Println("byFacePicQuality: ", captureResult.ByFacePicQuality)
+		// 写人脸图片到临时文件
+		writeCaptureFace(unsafe.Pointer(captureResult.PFacePicBuffer), captureResult.DwFacePicSize)
 	} else {
-		sendRemoteFinishedForFingerCapture <- false
+		sendRemoteFinishedForFaceCapture <- false
 	}
 }
 
-// 写指纹到文件
-func writePrintCaptureData(printData []byte, size uint32) {
+// 写人脸图片到临时文件
+func writeCaptureFace(faceBuffer unsafe.Pointer, size uint32) {
+	buffer := hik.GoBytes(faceBuffer, size)
+
 	// 目录
-	dir := os.TempDir() + "/hik_finger/capture"
+	dir := os.TempDir() + "/hik_face/capture"
 	err := os.MkdirAll(dir, os.ModePerm)
 	if nil != err {
-		sendRemoteFinishedForFingerCapture <- false
+		sendRemoteFinishedForFaceCapture <- false
 		log.Fatal("Cannot create temporary dir", err)
 		return
 	}
 
 	// 临时文件
-	tmpFile, err := ioutil.TempFile(dir, "*.bin")
+	tmpFile, err := ioutil.TempFile(dir, "*.jpg")
 	if err != nil {
-		sendRemoteFinishedForFingerCapture <- false
+		sendRemoteFinishedForFaceCapture <- false
 		log.Fatal("Cannot create temporary file", err)
 		return
 	}
 
 	// 写文件
-	_, err = tmpFile.Write(printData[:size])
+	_, err = tmpFile.Write(buffer)
 	if err != nil {
-		sendRemoteFinishedForFingerCapture <- false
+		sendRemoteFinishedForFaceCapture <- false
 		log.Fatal("Cannot write temporary file", err)
 	}
 	fmt.Println("Output file: ", tmpFile.Name())

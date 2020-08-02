@@ -565,6 +565,8 @@ type NET_DVR_CARD_CFG_SEND_DATA struct {
 }
 type LPNET_DVR_CARD_CFG_SEND_DATA *NET_DVR_CARD_CFG_SEND_DATA
 
+/************************* 人脸参数配置 *************************/
+
 // 人脸参数
 // See https://open.hikvision.com/hardware/structures/NET_DVR_FACE_PARAM_COND.html
 type NET_DVR_FACE_PARAM_COND struct {
@@ -606,6 +608,64 @@ type NET_DVR_FACE_PARAM_STATUS struct {
 	ByRes          [130]byte
 }
 type LPNET_DVR_FACE_PARAM_STATUS *NET_DVR_FACE_PARAM_STATUS
+
+// 采集人脸信息条件参数结构体
+type NET_DVR_CAPTURE_FACE_COND struct {
+	DwSize uint32
+	ByRes  [128]byte
+}
+type LPNET_DVR_CAPTURE_FACE_COND *NET_DVR_CAPTURE_FACE_COND
+
+// 人脸信息采集结果结构体
+type NET_DVR_CAPTURE_FACE_CFG struct {
+	DwSize                   uint32
+	DwFaceTemplate1Size      uint32 //人脸模板1数据大小，等于0时，代表无人脸模板1数据
+	PFaceTemplate1Buffer     *byte  //人脸模板1数据缓存（不大于2.5k）
+	DwFaceTemplate2Size      uint32 //人脸模板2数据大小，等于0时，代表无人脸模板2数据
+	PFaceTemplate2Buffer     *byte  //人脸模板2数据缓存（不大于2.5K）
+	DwFacePicSize            uint32 //人脸图片数据大小，等于0时，代表无人脸图片数据
+	PFacePicBuffer           *byte  //人脸图片数据缓存
+	ByFaceQuality1           byte   //人脸质量，范围1-100
+	ByFaceQuality2           byte   //人脸质量，范围1-100
+	ByCaptureProgress        byte   //采集进度，目前只有两种进度值：0-未采集到人脸，100-采集到人脸（只有在进度为100时，才解析人脸信息）
+	ByFacePicQuality         byte   //人脸图片中人脸质量
+	DwInfraredFacePicSize    uint32 //红外人脸图片数据大小，等于0时，代表无人脸图片数据
+	PInfraredFacePicBuffer   *byte  //红外人脸图片数据缓存
+	ByInfraredFacePicQuality byte   //红外人脸图片中人脸质量
+	ByRes1                   [3]byte
+	StruFeature              NET_DVR_FACE_FEATURE //人脸抠图特征信息
+	ByRes                    [56]byte
+}
+type LPNET_DVR_CAPTURE_FACE_CFG *NET_DVR_CAPTURE_FACE_CFG
+
+// 人脸抠图特征信息
+type NET_DVR_FACE_FEATURE struct {
+	StruFace       NET_VCA_RECT  //人脸子图区域
+	StruLeftEye    NET_VCA_POINT // 左眼坐标
+	StruRightEye   NET_VCA_POINT // 右眼坐标
+	StruLeftMouth  NET_VCA_POINT // 嘴左边坐标
+	StruRightMouth NET_VCA_POINT // 嘴右边坐标
+	StruNoseTip    NET_VCA_POINT // 鼻子坐标
+}
+type LPNET_DVR_FACE_FEATURE *NET_DVR_FACE_FEATURE
+
+// 区域框结构
+type NET_VCA_RECT struct {
+	FX      float32 //边界框左上角点的X轴坐标, 0.000~1
+	FY      float32 //边界框左上角点的Y轴坐标, 0.000~1
+	FWidth  float32 //边界框的宽度, 0.000~1
+	FHeight float32 //边界框的高度, 0.000~1
+}
+type LPNET_VCA_RECT *NET_VCA_RECT
+
+// 点坐标结构
+type NET_VCA_POINT struct {
+	FX float32 // X轴坐标, 0.000~1
+	FY float32 //Y轴坐标, 0.000~1
+}
+type LPNET_VCA_POINT *NET_VCA_POINT
+
+/************************* 指纹参数配置 *************************/
 
 // 指纹参数配置条件结构体
 // See https://open.hikvision.com/hardware/structures/NET_DVR_FINGER_PRINT_INFO_COND.html
